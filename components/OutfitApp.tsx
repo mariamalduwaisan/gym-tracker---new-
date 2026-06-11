@@ -5,7 +5,6 @@ import type { Outfit, SavedOutfit } from '@/lib/types'
 import OutfitCard from './OutfitCard'
 import SkeletonCard from './SkeletonCard'
 import SavedOutfits from './SavedOutfits'
-import ClothingPicker from './ClothingPicker'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const OCCASIONS = ['Work', 'University', 'Dinner', 'Wedding', 'Casual', 'Travel', 'Gym', 'Party']
@@ -14,19 +13,15 @@ const MODEL     = 'llama-3.3-70b-versatile'
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 function buildPrompt(params: {
-  occasion: string; style: string; clothes: string[]
-  customClothes: string; colors: string[]; weather: string; notes: string
+  occasion: string; style: string; wardrobe: string
+  colors: string[]; weather: string; notes: string
 }) {
-  const { occasion, style, clothes, customClothes, colors, weather, notes } = params
-  const allItems = [
-    ...clothes,
-    ...(customClothes.trim() ? [customClothes.trim()] : []),
-  ]
+  const { occasion, style, wardrobe, colors, weather, notes } = params
   return `Create exactly 3 distinct, creative outfit suggestions based on the user's preferences below.
 
 Occasion: ${occasion || 'Not specified'}
 Style: ${style || 'Not specified'}
-Available wardrobe items: ${allItems.length ? allItems.join(', ') : 'Any items you like'}
+Available wardrobe items: ${wardrobe.trim() || 'Any items you like'}
 Preferred colors: ${colors.length ? colors.join(', ') : 'No specific preference'}
 Weather / Temperature: ${weather || 'Not specified'}
 Additional notes: ${notes || 'None'}
@@ -56,14 +51,15 @@ Rules:
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function OutfitApp() {
   // Form
-  const [occasion, setOccasion]           = useState('')
-  const [style, setStyle]                 = useState('')
-  const [selectedClothes, setClothes]     = useState<string[]>([])
-  const [customClothes, setCustomClothes] = useState('')
-  const [colors, setColors]               = useState<string[]>([])
-  const [colorInput, setColorInput]       = useState('')
-  const [weather, setWeather]             = useState('')
-  const [notes, setNotes]                 = useState('')
+  const [occasion, setOccasion]   = useState('')
+  const [style, setStyle]         = useState('')
+  const [wardrobe, setWardrobe]   = useState('')
+  const [colors, setColors]       = useState<string[]>([])
+  const [colorInput, setColorInput] = useState('')
+  const [weather, setWeather]     = useState('')
+  const [notes, setNotes]         = useState('')
+  const [apiKey, setApiKey]       = useState('')
+  const [keySaved, setKeySaved]   = useState(false)
 
   // App
   const [loading, setLoading]         = useState(false)
@@ -85,6 +81,8 @@ export default function OutfitApp() {
     try {
       setSaved(JSON.parse(localStorage.getItem('outfitai_saved') ?? '[]'))
     } catch { /* empty */ }
+    const storedKey = localStorage.getItem('outfitai_key') ?? ''
+    if (storedKey) { setApiKey(storedKey); setKeySaved(true) }
     const p = new URLSearchParams(window.location.search)
     const o = p.get('occasion')
     const s = p.get('style')
@@ -126,6 +124,22 @@ export default function OutfitApp() {
     setStyle(v); syncURL(occasion, v)
   }, [occasion, syncURL])
 
+  // ─── API Key ──────────────────────────────────────────────────────────────
+  const saveKey = useCallback(() => {
+    const k = apiKey.trim()
+    if (!k) return
+    localStorage.setItem('outfitai_key', k)
+    setKeySaved(true)
+    toast('API key saved ✓')
+  }, [apiKey, toast])
+
+  const clearKey = useCallback(() => {
+    localStorage.removeItem('outfitai_key')
+    setApiKey('')
+    setKeySaved(false)
+    toast('API key cleared.')
+  }, [toast])
+
   // ─── Colors ───────────────────────────────────────────────────────────────
   const addColor = useCallback(() => {
     const v = colorInput.trim()
@@ -146,13 +160,13 @@ export default function OutfitApp() {
     setOutfits([])
     setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
 
-    const prompt = buildPrompt({ occasion, style, clothes: selectedClothes, customClothes, colors, weather, notes })
+    const prompt = buildPrompt({ occasion, style, wardrobe, colors, weather, notes })
 
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, model: MODEL }),
+        body: JSON.stringify({ prompt, model: MODEL, apiKey: apiKey.trim() || undefined }),
       })
       const data = await res.json() as {
         choices?: Array<{ message?: { content?: string } }>
@@ -175,7 +189,7 @@ export default function OutfitApp() {
     } finally {
       setLoading(false)
     }
-  }, [occasion, style, selectedClothes, customClothes, colors, weather, notes])
+  }, [occasion, style, wardrobe, colors, weather, notes, apiKey])
 
   // ─── Save / unsave ────────────────────────────────────────────────────────
   const toggleSave = useCallback((outfit: Outfit) => {
@@ -271,6 +285,36 @@ export default function OutfitApp() {
       {/* Main */}
       <main className="main">
         <section>
+
+          {/* ── API Key ── */}
+          <div className="form-card" style={{ marginBottom: '1rem' }}>
+            <div className="field-label">🔑 Groq API Key</div>
+            <p className="key-hint">
+              Free key at{' '}
+              <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">
+                console.groq.com/keys
+              </a>
+              {' '}— saved only in your browser.
+            </p>
+            <div className="key-row">
+              <input
+                className="f-input"
+                type="password"
+                value={apiKey}
+                onChange={e => { setApiKey(e.target.value); setKeySaved(false) }}
+                onKeyDown={e => { if (e.key === 'Enter') saveKey() }}
+                placeholder="gsk_…"
+                aria-label="Groq API key"
+                autoComplete="off"
+              />
+              {keySaved
+                ? <button className="key-btn key-btn-clear" onClick={clearKey}>Clear</button>
+                : <button className="key-btn" onClick={saveKey} disabled={!apiKey.trim()}>Save</button>
+              }
+            </div>
+            {keySaved && <div className="key-ok">✓ Key saved</div>}
+          </div>
+
           <div className="form-grid">
 
             {/* Occasion */}
@@ -297,42 +341,18 @@ export default function OutfitApp() {
               </div>
             </div>
 
-          </div>{/* /form-grid top row */}
+          </div>
 
-          {/* Wardrobe picker — shown after occasion + style selected */}
-          {(occasion || style) && (
-            <div className="form-card" style={{ marginBottom: '1rem' }}>
-              <div className="field-label">👗 Your Wardrobe — pick what you own</div>
-              <ClothingPicker selected={selectedClothes} onChange={setClothes} />
-
-              {/* Selected items summary */}
-              {selectedClothes.length > 0 && (
-                <div className="cp-selected">
-                  <span className="cp-selected-label">Selected:</span>
-                  {selectedClothes.map(c => (
-                    <span key={c} className="chip">
-                      {c}
-                      <button
-                        className="chip-x"
-                        onClick={() => setClothes(prev => prev.filter(x => x !== c))}
-                        aria-label={`Remove ${c}`}
-                      >×</button>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Custom extras */}
-              <input
-                className="f-input"
-                style={{ marginTop: '1rem' }}
-                type="text"
-                value={customClothes}
-                onChange={e => setCustomClothes(e.target.value)}
-                placeholder="Anything else? e.g. vintage denim jacket, silk scarf…"
-              />
-            </div>
-          )}
+          {/* Wardrobe */}
+          <div className="form-card" style={{ marginBottom: '1rem' }}>
+            <div className="field-label">👗 Your Wardrobe</div>
+            <textarea
+              className="f-textarea"
+              value={wardrobe}
+              onChange={e => setWardrobe(e.target.value)}
+              placeholder="List what you own, e.g. white button-down shirt, black jeans, midi floral dress, brown leather jacket, white sneakers…"
+            />
+          </div>
 
           <div className="form-grid">
             {/* Colors */}
@@ -387,13 +407,22 @@ export default function OutfitApp() {
 
           {/* Generate */}
           <div className="gen-wrap">
-            <button className="gen-btn" onClick={generate} disabled={loading} aria-busy={loading}>
+            <button
+              className="gen-btn"
+              onClick={generate}
+              disabled={loading || !apiKey.trim()}
+              aria-busy={loading}
+              title={!apiKey.trim() ? 'Enter your Groq API key above first' : undefined}
+            >
               {loading ? (
                 <><div className="spinner" aria-hidden="true" /><span>Styling your look…</span></>
               ) : (
                 <span>✨ Generate My Outfits</span>
               )}
             </button>
+            {!apiKey.trim() && (
+              <p className="gen-hint">Enter your free Groq API key above to get started</p>
+            )}
           </div>
         </section>
 

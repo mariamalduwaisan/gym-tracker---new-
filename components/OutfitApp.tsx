@@ -11,7 +11,9 @@ import SavedOutfits from './SavedOutfits'
 const OCCASIONS = ['Work', 'University', 'Dinner', 'Wedding', 'Casual', 'Travel', 'Gym', 'Party']
 const STYLES    = ['Classy', 'Modest', 'Trendy', 'Minimal', 'Sporty', 'Luxury', 'Streetwear']
 const MODELS    = [
-  { value: 'openai/gpt-4o-mini',                    label: 'GPT-4o Mini (recommended)' },
+  { value: 'openai/gpt-oss-120b',                    label: 'GPT OSS 120B' },
+  { value: 'anthropic/claude-opus-4.8-fast',         label: 'Claude Opus 4.8 Fast' },
+  { value: 'openai/gpt-4o-mini',                     label: 'GPT-4o Mini' },
   { value: 'openai/gpt-4o',                          label: 'GPT-4o' },
   { value: 'anthropic/claude-3.5-haiku',             label: 'Claude 3.5 Haiku' },
   { value: 'anthropic/claude-3.5-sonnet',            label: 'Claude 3.5 Sonnet' },
@@ -66,7 +68,7 @@ export default function OutfitApp() {
   const [colorInput, setColorInput] = useState('')
   const [weather, setWeather]       = useState('')
   const [notes, setNotes]           = useState('')
-  const [model, setModel]           = useState('openai/gpt-4o-mini')
+  const [model, setModel]           = useState('openai/gpt-oss-120b')
 
   // App
   const [apiKey, setApiKey]           = useState('')

@@ -7,9 +7,28 @@ import SkeletonCard from './SkeletonCard'
 import SavedOutfits from './SavedOutfits'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const OCCASIONS = ['Work', 'University', 'Dinner', 'Wedding', 'Casual', 'Travel', 'Gym', 'Party']
-const STYLES    = ['Classy', 'Modest', 'Trendy', 'Minimal', 'Sporty', 'Luxury', 'Streetwear']
-const MODEL     = 'llama-3.3-70b-versatile'
+const OCCASIONS = [
+  { value: 'Work',       emoji: '💼', label: 'Work'       },
+  { value: 'University', emoji: '🎓', label: 'University' },
+  { value: 'Dinner',     emoji: '🍽️', label: 'Dinner'     },
+  { value: 'Wedding',    emoji: '💍', label: 'Wedding'    },
+  { value: 'Casual',     emoji: '👟', label: 'Casual'     },
+  { value: 'Travel',     emoji: '✈️', label: 'Travel'     },
+  { value: 'Gym',        emoji: '🏋️', label: 'Gym'        },
+  { value: 'Party',      emoji: '🎉', label: 'Party'      },
+]
+
+const STYLES = [
+  { value: 'Classy',      emoji: '👗', label: 'Classy'      },
+  { value: 'Modest',      emoji: '🧕', label: 'Modest'      },
+  { value: 'Trendy',      emoji: '✨', label: 'Trendy'      },
+  { value: 'Minimal',     emoji: '🤍', label: 'Minimal'     },
+  { value: 'Sporty',      emoji: '🏃', label: 'Sporty'      },
+  { value: 'Luxury',      emoji: '💎', label: 'Luxury'      },
+  { value: 'Streetwear',  emoji: '🧢', label: 'Streetwear'  },
+]
+
+const MODEL = 'llama-3.3-70b-versatile'
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 function buildPrompt(params: {
@@ -84,8 +103,8 @@ export default function OutfitApp() {
     const p = new URLSearchParams(window.location.search)
     const o = p.get('occasion')
     const s = p.get('style')
-    if (o && OCCASIONS.includes(o)) setOccasion(o)
-    if (s && STYLES.includes(s))    setStyle(s)
+    if (o && OCCASIONS.some(x => x.value === o)) setOccasion(o)
+    if (s && STYLES.some(x => x.value === s))    setStyle(s)
   }, [])
 
   // ─── Theme ────────────────────────────────────────────────────────────────
@@ -281,10 +300,15 @@ export default function OutfitApp() {
             {/* Occasion */}
             <div className="form-card">
               <div className="field-label">📅 Occasion</div>
-              <div className="pills">
+              <div className="opt-grid">
                 {OCCASIONS.map(o => (
-                  <button key={o} className={`pill${occasion === o ? ' on' : ''}`} onClick={() => handleOccasion(o)}>
-                    {o}
+                  <button
+                    key={o.value}
+                    className={`opt-card${occasion === o.value ? ' on' : ''}`}
+                    onClick={() => handleOccasion(o.value)}
+                  >
+                    <span className="opt-emoji">{o.emoji}</span>
+                    <span className="opt-label">{o.label}</span>
                   </button>
                 ))}
               </div>
@@ -293,10 +317,15 @@ export default function OutfitApp() {
             {/* Style */}
             <div className="form-card">
               <div className="field-label">💫 Your Style</div>
-              <div className="pills">
+              <div className="opt-grid">
                 {STYLES.map(s => (
-                  <button key={s} className={`pill${style === s ? ' on' : ''}`} onClick={() => handleStyle(s)}>
-                    {s}
+                  <button
+                    key={s.value}
+                    className={`opt-card${style === s.value ? ' on' : ''}`}
+                    onClick={() => handleStyle(s.value)}
+                  >
+                    <span className="opt-emoji">{s.emoji}</span>
+                    <span className="opt-label">{s.label}</span>
                   </button>
                 ))}
               </div>

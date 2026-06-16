@@ -68,6 +68,16 @@ export default function WorkoutCard({ workout, onUpdate, onDelete, onLog }: Prop
       border: `1px solid ${workout.priority === 'urgent' ? `${color}40` : '#2c2c2e'}`,
       boxShadow: workout.priority === 'urgent' ? `0 0 20px ${color}18` : undefined,
     }}>
+      {/* Cover image */}
+      {workout.image_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={workout.image_url}
+          alt={workout.title}
+          style={{ width: '100%', height: 130, objectFit: 'cover', display: 'block' }}
+        />
+      )}
+
       {/* Header row */}
       <div
         onClick={() => setExpanded(e => !e)}

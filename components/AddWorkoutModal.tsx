@@ -1,7 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Workout, Priority, Status } from '@/lib/types'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 interface Props {
   onClose:   () => void
@@ -25,15 +31,39 @@ export default function AddWorkoutModal({ onClose, onCreated }: Props) {
   const [title,       setTitle]       = useState('')
   const [description, setDescription] = useState('')
   const [priority,    setPriority]    = useState<Priority>('medium')
+  const [imageFile,   setImageFile]   = useState<File | null>(null)
+  const [imagePreview,setImagePreview]= useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const [status,      setStatus]      = useState<Status>('pending')
   const [date,        setDate]        = useState(new Date().toISOString().split('T')[0])
   const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState('')
 
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) return setError('Title is required')
     setLoading(true)
+
+    // Upload image if selected
+    let image_url: string | null = null
+    if (imageFile) {
+      const ext  = imageFile.name.split('.').pop()
+      const path = `${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('workout-images')
+        .upload(path, imageFile, { upsert: true })
+      if (upErr) { setError('Image upload failed: ' + upErr.message); setLoading(false); return }
+      const { data: urlData } = supabase.storage.from('workout-images').getPublicUrl(path)
+      image_url = urlData.publicUrl
+    }
+
     const res = await fetch('/api/workouts', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -43,6 +73,7 @@ export default function AddWorkoutModal({ onClose, onCreated }: Props) {
         priority,
         status,
         scheduled_date: date,
+        image_url,
       }),
     })
     if (res.ok) {
@@ -161,6 +192,52 @@ export default function AddWorkoutModal({ onClose, onCreated }: Props) {
               onChange={e => setDate(e.target.value)}
               style={{ ...field, colorScheme: 'dark' }}
             />
+          </div>
+
+          {/* Image upload */}
+          <div>
+            <label style={label}>Image (optional)</label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleImageChange}
+              style={{ display: 'none' }}
+            />
+            {imagePreview ? (
+              <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => { setImageFile(null); setImagePreview(null) }}
+                  style={{
+                    position: 'absolute', top: 8, right: 8,
+                    width: 28, height: 28, borderRadius: '50%',
+                    background: 'rgba(0,0,0,.6)', color: '#fff',
+                    fontSize: 18, border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >×</button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                style={{
+                  width: '100%', padding: '20px 0', borderRadius: 14,
+                  background: '#2c2c2e', color: '#8e8e93',
+                  fontSize: 13, fontWeight: 600,
+                  border: '1.5px dashed #3a3a3c',
+                }}
+              >
+                📷  Tap to add a photo
+              </button>
+            )}
           </div>
 
           {error && <p style={{ color: '#FF375F', fontSize: 13 }}>{error}</p>}

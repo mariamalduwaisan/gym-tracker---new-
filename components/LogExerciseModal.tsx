@@ -14,15 +14,20 @@ interface Props {
   onClose: () => void
 }
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
 export default function LogExerciseModal({ workout, onClose }: Props) {
-  const [exercises,         setExercises]         = useState<Exercise[]>([])
-  const [logs,              setLogs]              = useState<Record<string, ExerciseLog[]>>({})
-  const [selectedExercise,  setSelectedExercise]  = useState<Exercise | null>(null)
-  const [sets,              setSets]              = useState<SetEntry[]>([{ set_number: 1, reps: '', weight: '' }])
-  const [newExName,         setNewExName]         = useState('')
-  const [addingEx,          setAddingEx]          = useState(false)
-  const [loading,           setLoading]           = useState(true)
-  const [saving,            setSaving]            = useState(false)
+  const [exercises,        setExercises]        = useState<Exercise[]>([])
+  const [logs,             setLogs]             = useState<Record<string, ExerciseLog[]>>({})
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null)
+  const [sets,             setSets]             = useState<SetEntry[]>([{ set_number: 1, reps: '', weight: '' }])
+  const [newExName,        setNewExName]        = useState('')
+  const [addingEx,         setAddingEx]         = useState(false)
+  const [loading,          setLoading]          = useState(true)
+  const [saving,           setSaving]           = useState(false)
+  const [summary,          setSummary]          = useState<string | null>(null)
+  const [summaryLoading,   setSummaryLoading]   = useState(false)
 
   const fetchLogs = useCallback(async (exerciseId: string) => {
     const res  = await fetch(`/api/exercise-logs?exercise_id=${exerciseId}`)
@@ -72,7 +77,9 @@ export default function LogExerciseModal({ workout, onClose }: Props) {
     const valid = sets.filter(s => s.reps !== '')
     if (valid.length === 0) return
     setSaving(true)
+    setSummary(null)
 
+    // Save logs to DB
     await Promise.all(valid.map(s =>
       fetch('/api/exercise-logs', {
         method:  'POST',
@@ -89,12 +96,44 @@ export default function LogExerciseModal({ workout, onClose }: Props) {
     await fetchLogs(selectedExercise.id)
     setSets([{ set_number: 1, reps: '', weight: '' }])
     setSaving(false)
+
+    // Call edge function for motivational summary
+    setSummaryLoading(true)
+    try {
+      const payload = {
+        workoutTitle: workout.title,
+        exercises: valid.map(s => ({
+          name:   selectedExercise.name,
+          sets:   1,
+          reps:   parseInt(s.reps),
+          weight: parseFloat(s.weight) || 0,
+        })),
+      }
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/workout-summary`,
+        {
+          method:  'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            'apikey':        SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      )
+      const data = await res.json()
+      setSummary(data.summary ?? null)
+    } catch {
+      setSummary('💪 Great session! Keep pushing — every rep counts.')
+    }
+    setSummaryLoading(false)
   }
 
   function selectExercise(ex: Exercise) {
     setSelectedExercise(ex)
     fetchLogs(ex.id)
     setSets([{ set_number: 1, reps: '', weight: '' }])
+    setSummary(null)
   }
 
   const inp: React.CSSProperties = {
@@ -115,13 +154,13 @@ export default function LogExerciseModal({ workout, onClose }: Props) {
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div style={{
-        background:   '#1c1c1e',
+        background:  '#1c1c1e',
         width: '100%', maxWidth: 430,
         borderRadius: '24px 24px 0 0',
-        padding:      '20px 20px 40px',
-        maxHeight:    '90vh',
-        overflowY:    'auto',
-        animation:    'up .3s ease',
+        padding:     '20px 20px 40px',
+        maxHeight:   '90vh',
+        overflowY:   'auto',
+        animation:   'up .3s ease',
       }}>
         {/* Handle */}
         <div style={{ width: 40, height: 5, borderRadius: 100, background: '#3a3a3c', margin: '0 auto 20px' }} />
@@ -183,7 +222,7 @@ export default function LogExerciseModal({ workout, onClose }: Props) {
               </div>
             </div>
 
-            {/* Add exercise row */}
+            {/* Add exercise inline */}
             {addingEx && (
               <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                 <input
@@ -212,7 +251,7 @@ export default function LogExerciseModal({ workout, onClose }: Props) {
               <div style={{ textAlign: 'center', padding: '32px 0' }}>
                 <p style={{ fontSize: 36, marginBottom: 8 }}>💪</p>
                 <p style={{ color: '#636366', fontSize: 14 }}>No exercises yet.</p>
-                <p style={{ color: '#636366', fontSize: 13, marginTop: 4 }}>Tap "+ Add" to create your first exercise.</p>
+                <p style={{ color: '#636366', fontSize: 13, marginTop: 4 }}>Tap &quot;+ Add&quot; to create your first exercise.</p>
               </div>
             )}
 
@@ -261,13 +300,15 @@ export default function LogExerciseModal({ workout, onClose }: Props) {
                 </div>
 
                 <button
-                  onClick={() => setSets(prev => [...prev, { set_number: prev.length + 1, reps: '', weight: prev[prev.length - 1]?.weight || '' }])}
+                  onClick={() => setSets(prev => [...prev, {
+                    set_number: prev.length + 1, reps: '',
+                    weight: prev[prev.length - 1]?.weight || '',
+                  }])}
                   style={{
                     width: '100%', padding: '10px', borderRadius: 12,
                     background: '#2c2c2e', color: '#8e8e93',
                     fontSize: 13, fontWeight: 600,
-                    border: '1px dashed #3a3a3c',
-                    marginBottom: 12,
+                    border: '1px dashed #3a3a3c', marginBottom: 12,
                   }}
                 >
                   + Add Set
@@ -275,16 +316,53 @@ export default function LogExerciseModal({ workout, onClose }: Props) {
 
                 <button
                   onClick={logSets}
-                  disabled={saving}
+                  disabled={saving || summaryLoading}
                   style={{
                     width: '100%', padding: '14px', borderRadius: 14,
                     background: '#A5F044', color: '#000',
                     fontSize: 15, fontWeight: 700, border: 'none',
-                    opacity: saving ? 0.7 : 1,
+                    opacity: (saving || summaryLoading) ? 0.7 : 1,
                   }}
                 >
                   {saving ? 'Saving…' : 'Log Sets'}
                 </button>
+
+                {/* ── Motivational summary ── */}
+                {summaryLoading && (
+                  <div style={{
+                    marginTop: 16,
+                    background: '#2c2c2e',
+                    borderRadius: 14,
+                    padding: '16px',
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    border: '1px solid #3a3a3c',
+                  }}>
+                    <div className="spinner" style={{ flexShrink: 0 }} />
+                    <p style={{ color: '#8e8e93', fontSize: 13 }}>Getting your motivational summary…</p>
+                  </div>
+                )}
+
+                {summary && !summaryLoading && (
+                  <div style={{
+                    marginTop: 16,
+                    background: 'linear-gradient(135deg, #1a2a1a 0%, #1c2e1a 100%)',
+                    borderRadius: 16,
+                    padding: '16px 18px',
+                    border: '1px solid #A5F04430',
+                    boxShadow: '0 0 20px #A5F04415',
+                    animation: 'slide-down .4s cubic-bezier(.4,0,.2,1)',
+                  }}>
+                    <p style={{
+                      color: '#A5F044', fontSize: 10, fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 8,
+                    }}>
+                      ✦ AI Coach
+                    </p>
+                    <p style={{ color: '#e8f5e8', fontSize: 14, lineHeight: 1.6, fontWeight: 500 }}>
+                      {summary}
+                    </p>
+                  </div>
+                )}
 
                 {/* Previous logs */}
                 {selectedLogs.length > 0 && (

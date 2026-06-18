@@ -1,14 +1,17 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import type { Session } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 import { Workout, ProgressMetric, Priority, Status } from '@/lib/types'
-import ActivityRings     from '@/components/ActivityRings'
+import ActivityRings      from '@/components/ActivityRings'
 import NotificationBanner from '@/components/NotificationBanner'
-import WorkoutCard       from '@/components/WorkoutCard'
-import AddWorkoutModal   from '@/components/AddWorkoutModal'
-import LogExerciseModal  from '@/components/LogExerciseModal'
-import ProgressTab       from '@/components/ProgressTab'
-import Nav               from '@/components/Nav'
+import WorkoutCard        from '@/components/WorkoutCard'
+import AddWorkoutModal    from '@/components/AddWorkoutModal'
+import LogExerciseModal   from '@/components/LogExerciseModal'
+import ProgressTab        from '@/components/ProgressTab'
+import Nav                from '@/components/Nav'
+import AuthScreen         from '@/components/AuthScreen'
 
 type Tab            = 'dashboard' | 'workouts' | 'progress'
 type PriorityFilter = 'all' | Priority
@@ -24,6 +27,7 @@ const SC: Record<string, string> = {
 }
 
 export default function App() {
+  const [session,        setSession]       = useState<Session | null | undefined>(undefined)
   const [tab,            setTab]           = useState<Tab>('dashboard')
   const [workouts,       setWorkouts]      = useState<Workout[]>([])
   const [metrics,        setMetrics]       = useState<ProgressMetric[]>([])
@@ -32,6 +36,13 @@ export default function App() {
   const [statusFilter,   setStatusFilter]  = useState<StatusFilter>('all')
   const [showAddModal,   setShowAddModal]  = useState(false)
   const [logWorkout,     setLogWorkout]    = useState<Workout | null>(null)
+
+  // ── Auth ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    return () => subscription.unsubscribe()
+  }, [])
 
   const load = useCallback(async () => {
     const [wRes, mRes] = await Promise.all([
@@ -114,6 +125,12 @@ export default function App() {
     )
   }
 
+  // Show nothing while session is being resolved
+  if (session === undefined) return null
+
+  // Not logged in → show auth screen
+  if (!session) return <AuthScreen />
+
   return (
     <div style={{ minHeight: '100vh', background: '#000', paddingBottom: 88 }}>
 
@@ -127,23 +144,35 @@ export default function App() {
             Transformation<br />Journey
           </h1>
         </div>
-        {urgentPending.length > 0 && (
-          <div style={{
-            padding: '7px 14px', borderRadius: 100,
-            background: 'rgba(255,55,95,.14)',
-            border: '1px solid rgba(255,55,95,.28)',
-            color: '#FF375F', fontSize: 12, fontWeight: 700,
-            display: 'flex', alignItems: 'center', gap: 6,
-            marginTop: 6,
-          }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%', background: '#FF375F',
-              display: 'inline-block',
-              animation: 'pulse-dot 1.6s ease infinite',
-            }} />
-            {urgentPending.length} urgent
-          </div>
-        )}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, marginTop: 6 }}>
+          {urgentPending.length > 0 && (
+            <div style={{
+              padding: '7px 14px', borderRadius: 100,
+              background: 'rgba(255,55,95,.14)',
+              border: '1px solid rgba(255,55,95,.28)',
+              color: '#FF375F', fontSize: 12, fontWeight: 700,
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%', background: '#FF375F',
+                display: 'inline-block',
+                animation: 'pulse-dot 1.6s ease infinite',
+              }} />
+              {urgentPending.length} urgent
+            </div>
+          )}
+          <button
+            onClick={() => supabase.auth.signOut()}
+            style={{
+              padding: '6px 14px', borderRadius: 100, border: 'none',
+              background: '#1c1c1e', color: '#636366',
+              fontSize: 11, fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '.06em',
+            }}
+          >
+            Sign Out
+          </button>
+        </div>
       </header>
 
       {/* ── Loading skeleton ─────────────────────────────────────── */}

@@ -43,13 +43,12 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json()
   const { id, ...updates } = body
 
-  // Ownership check: RLS SELECT only returns rows owned by this user,
-  // so no row → not owner (or doesn't exist) → 403
+  // Fetch the row and explicitly compare user_id (SELECT is now open to all auth users)
   const { data: existing } = await client
-    .from('workouts').select('id').eq('id', id).single()
-  if (!existing) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    .from('workouts').select('id, user_id').eq('id', id).single()
+  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (existing.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  // Strip user_id from updates so it can never be reassigned
   const { user_id: _dropped, ...safeUpdates } = updates
   const { data, error } = await client
     .from('workouts')
@@ -70,10 +69,11 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
-  // Ownership check: same pattern — RLS hides rows not owned by this user
+  // Fetch the row and explicitly compare user_id
   const { data: existing } = await client
-    .from('workouts').select('id').eq('id', id).single()
-  if (!existing) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    .from('workouts').select('id, user_id').eq('id', id).single()
+  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (existing.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { error } = await client.from('workouts').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

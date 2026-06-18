@@ -1,13 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { makeSupabaseClient } from '@/lib/server-client'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
-export async function GET() {
-  const { data, error } = await supabase
+export async function GET(req: NextRequest) {
+  const client = makeSupabaseClient(req)
+  const { data, error } = await client
     .from('progress_metrics')
     .select('*')
     .order('recorded_at', { ascending: true })
@@ -16,10 +12,14 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const client = makeSupabaseClient(req)
+  const { data: { user } } = await client.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const body = await req.json()
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('progress_metrics')
-    .insert([body])
+    .insert([{ ...body, user_id: user.id }])
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

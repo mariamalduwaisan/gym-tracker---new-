@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase, authedFetch } from '@/lib/supabase'
 import { Workout, ProgressMetric, Priority, Status } from '@/lib/types'
 import ActivityRings      from '@/components/ActivityRings'
 import NotificationBanner from '@/components/NotificationBanner'
@@ -46,8 +46,8 @@ export default function App() {
 
   const load = useCallback(async () => {
     const [wRes, mRes] = await Promise.all([
-      fetch('/api/workouts'),
-      fetch('/api/progress'),
+      authedFetch('/api/workouts'),
+      authedFetch('/api/progress'),
     ])
     const [ws, ms] = await Promise.all([wRes.json(), mRes.json()])
     setWorkouts(Array.isArray(ws) ? ws : [])

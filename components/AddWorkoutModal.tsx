@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { Workout, Priority, Status } from '@/lib/types'
-import { supabase } from '@/lib/supabase'
+import { supabase, authedFetch } from '@/lib/supabase'
 
 interface Props {
   onClose:   () => void
@@ -59,7 +59,7 @@ export default function AddWorkoutModal({ onClose, onCreated }: Props) {
       image_url = urlData.publicUrl
     }
 
-    const res = await fetch('/api/workouts', {
+    const res = await authedFetch('/api/workouts', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

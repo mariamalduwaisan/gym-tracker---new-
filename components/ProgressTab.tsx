@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ProgressMetric } from '@/lib/types'
+import { authedFetch } from '@/lib/supabase'
 
 interface Props {
   metrics: ProgressMetric[]
@@ -26,7 +27,7 @@ export default function ProgressTab({ metrics, onAdded }: Props) {
     e.preventDefault()
     if (!weight && !bodyFat) return
     setSaving(true)
-    const res = await fetch('/api/progress', {
+    const res = await authedFetch('/api/progress', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

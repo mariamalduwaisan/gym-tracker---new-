@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Workout, Status, Priority } from '@/lib/types'
+import { authedFetch } from '@/lib/supabase'
 
 const PC: Record<Priority, string> = {
   urgent: '#FF375F',
@@ -43,7 +44,7 @@ export default function WorkoutCard({ workout, onUpdate, onDelete, onLog }: Prop
     if (loading) return
     setLoading(true)
     const next = NEXT_STATUS[workout.status]
-    const res  = await fetch('/api/workouts', {
+    const res  = await authedFetch('/api/workouts', {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ id: workout.id, status: next }),
@@ -54,7 +55,7 @@ export default function WorkoutCard({ workout, onUpdate, onDelete, onLog }: Prop
 
   async function handleDelete() {
     if (!confirm('Delete this workout?')) return
-    await fetch(`/api/workouts?id=${workout.id}`, { method: 'DELETE' })
+    await authedFetch(`/api/workouts?id=${workout.id}`, { method: 'DELETE' })
     onDelete(workout.id)
   }
 

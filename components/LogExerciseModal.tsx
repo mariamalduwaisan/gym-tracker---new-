@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Workout, Exercise, ExerciseLog } from '@/lib/types'
+import { authedFetch } from '@/lib/supabase'
 
 interface SetEntry {
   set_number: number
@@ -30,14 +31,14 @@ export default function LogExerciseModal({ workout, onClose }: Props) {
   const [summaryLoading,   setSummaryLoading]   = useState(false)
 
   const fetchLogs = useCallback(async (exerciseId: string) => {
-    const res  = await fetch(`/api/exercise-logs?exercise_id=${exerciseId}`)
+    const res  = await authedFetch(`/api/exercise-logs?exercise_id=${exerciseId}`)
     const data = await res.json()
     setLogs(prev => ({ ...prev, [exerciseId]: data }))
   }, [])
 
   useEffect(() => {
     async function init() {
-      const res  = await fetch(`/api/exercises?workout_id=${workout.id}`)
+      const res  = await authedFetch(`/api/exercises?workout_id=${workout.id}`)
       const data = await res.json()
       setExercises(data)
       if (data.length > 0) {
@@ -51,7 +52,7 @@ export default function LogExerciseModal({ workout, onClose }: Props) {
 
   async function addExercise() {
     if (!newExName.trim()) return
-    const res = await fetch('/api/exercises', {
+    const res = await authedFetch('/api/exercises', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -81,7 +82,7 @@ export default function LogExerciseModal({ workout, onClose }: Props) {
 
     // Save logs to DB
     await Promise.all(valid.map(s =>
-      fetch('/api/exercise-logs', {
+      authedFetch('/api/exercise-logs', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

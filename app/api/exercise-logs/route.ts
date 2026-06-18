@@ -1,16 +1,12 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { makeSupabaseClient } from '@/lib/server-client'
 
 export async function GET(req: NextRequest) {
+  const client = makeSupabaseClient(req)
   const { searchParams } = new URL(req.url)
   const exerciseId = searchParams.get('exercise_id')
 
-  let query = supabase
+  let query = client
     .from('exercise_logs')
     .select('*')
     .order('logged_at', { ascending: false })
@@ -22,8 +18,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const client = makeSupabaseClient(req)
   const body = await req.json()
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('exercise_logs')
     .insert([body])
     .select()

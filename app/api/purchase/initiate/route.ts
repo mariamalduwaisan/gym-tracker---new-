@@ -16,7 +16,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const methods = await getAvailablePaymentMethods(amountKwd)
-    const paymentMethodId = methods[0].PaymentMethodId
+    // Prefer VISA/MASTER, then KNET, then first available
+    const preferred = methods.find(m => m.PaymentMethodId === 2)   // VISA/MASTER
+      ?? methods.find(m => m.PaymentMethodId === 1)                 // KNET
+      ?? methods[0]
+    const paymentMethodId = preferred.PaymentMethodId
     const reference = `TJ-${sessionsCount}S-${user.id.slice(0, 8)}-${Date.now()}`
 
     const { invoiceId, paymentUrl } = await executePayment({

@@ -1,6 +1,43 @@
 import Link from 'next/link'
+import { createClient } from '@supabase/supabase-js'
+import { getPaymentStatus } from '@/lib/myfatoorah'
 
-export default function PaymentSuccess() {
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+interface Props {
+  searchParams: Promise<{ paymentId?: string; Id?: string }>
+}
+
+export default async function PaymentSuccess({ searchParams }: Props) {
+  const params    = await searchParams
+  const paymentId = params.paymentId ?? params.Id ?? null
+
+  if (paymentId) {
+    try {
+      const json = await fetch(
+        `https://apitest.myfatoorah.com/v2/GetPaymentStatus`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${process.env.MYFATOORAH_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ Key: paymentId, KeyType: 'PaymentId' }),
+        }
+      ).then(r => r.json())
+
+      if (json.IsSuccess && json.Data.InvoiceStatus === 'Paid') {
+        const invoiceId = String(json.Data.InvoiceId)
+        await supabaseAdmin.rpc('mark_purchase_paid', { p_invoice_id: invoiceId })
+      }
+    } catch {
+      // best-effort — don't block the page
+    }
+  }
+
   return (
     <div style={{
       minHeight: '100vh', background: '#000',

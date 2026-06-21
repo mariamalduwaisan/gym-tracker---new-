@@ -12,6 +12,7 @@ import LogExerciseModal   from '@/components/LogExerciseModal'
 import ProgressTab        from '@/components/ProgressTab'
 import Nav                from '@/components/Nav'
 import AuthScreen         from '@/components/AuthScreen'
+import SessionsCard       from '@/components/SessionsCard'
 
 type Tab            = 'dashboard' | 'workouts' | 'progress'
 type PriorityFilter = 'all' | Priority
@@ -222,6 +223,11 @@ export default function App() {
                 </p>
               </div>
             ))}
+          </div>
+
+          {/* Session packages */}
+          <div id="sessions" style={{ marginBottom: 24 }}>
+            <SessionsCard />
           </div>
 
           {/* Today's workouts */}

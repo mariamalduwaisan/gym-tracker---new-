@@ -15,12 +15,8 @@ export async function POST(req: NextRequest) {
   if (!amountKwd) return NextResponse.json({ error: 'Invalid package' }, { status: 400 })
 
   try {
-    const methods = await getAvailablePaymentMethods(amountKwd)
-    // Prefer VISA/MASTER, then KNET, then first available
-    const preferred = methods.find(m => m.PaymentMethodId === 2)   // VISA/MASTER
-      ?? methods.find(m => m.PaymentMethodId === 1)                 // KNET
-      ?? methods[0]
-    const paymentMethodId = preferred.PaymentMethodId
+    await getAvailablePaymentMethods(amountKwd) // validate account has methods
+    const paymentMethodId = 0                  // show all methods (KNET + Visa/Master etc.)
     const reference = `TJ-${sessionsCount}S-${user.id.slice(0, 8)}-${Date.now()}`
 
     const { invoiceId, paymentUrl } = await executePayment({

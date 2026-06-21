@@ -7,7 +7,7 @@ const headers = () => ({
 })
 
 export async function getFirstPaymentMethod(amount: number): Promise<number> {
-  const res  = await fetch(`${BASE_URL}/api/v2/InitiatePayment`, {
+  const res  = await fetch(`${BASE_URL}/v2/InitiatePayment`, {
     method:  'POST',
     headers: headers(),
     body: JSON.stringify({ InvoiceAmount: amount, CurrencyIso: 'KWD' }),
@@ -29,7 +29,7 @@ export async function executePayment(opts: {
   callbackUrl:     string
   errorUrl:        string
 }): Promise<{ invoiceId: number; paymentUrl: string }> {
-  const res  = await fetch(`${BASE_URL}/api/v2/ExecutePayment`, {
+  const res  = await fetch(`${BASE_URL}/v2/ExecutePayment`, {
     method:  'POST',
     headers: headers(),
     body: JSON.stringify({
@@ -57,7 +57,7 @@ export async function executePayment(opts: {
 }
 
 export async function getPaymentStatus(paymentId: string): Promise<string> {
-  const res  = await fetch(`${BASE_URL}/api/v2/GetPaymentStatus`, {
+  const res  = await fetch(`${BASE_URL}/v2/GetPaymentStatus`, {
     method:  'POST',
     headers: headers(),
     body: JSON.stringify({ Key: paymentId, KeyType: 'PaymentId' }),

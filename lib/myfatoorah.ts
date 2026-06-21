@@ -35,7 +35,6 @@ export async function executePayment(opts: {
     body: JSON.stringify({
       PaymentMethodId:    opts.paymentMethodId,
       CustomerName:       opts.customerName,
-      CountryCode:        'KWT',
       DisplayCurrencyIso: 'KWD',
       MobileCountryCode:  '+965',
       CustomerMobile:     '00000000',

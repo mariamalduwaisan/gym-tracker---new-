@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { makeSupabaseClient } from '@/lib/server-client'
-import { executePayment } from '@/lib/myfatoorah'
+import { getAvailablePaymentMethods, executePayment } from '@/lib/myfatoorah'
 
 const PACKAGES: Record<number, number> = { 10: 100, 20: 200, 30: 300 }
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
@@ -15,10 +15,12 @@ export async function POST(req: NextRequest) {
   if (!amountKwd) return NextResponse.json({ error: 'Invalid package' }, { status: 400 })
 
   try {
+    const methods = await getAvailablePaymentMethods(amountKwd)
+    const paymentMethodId = methods[0].PaymentMethodId
     const reference = `TJ-${sessionsCount}S-${user.id.slice(0, 8)}-${Date.now()}`
 
     const { invoiceId, paymentUrl } = await executePayment({
-      paymentMethodId: 0,
+      paymentMethodId,
       sessionsCount,
       amountKwd,
       customerEmail: user.email ?? 'customer@example.com',

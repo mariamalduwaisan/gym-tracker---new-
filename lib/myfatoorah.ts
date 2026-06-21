@@ -6,7 +6,7 @@ const headers = () => ({
   'Content-Type': 'application/json',
 })
 
-export async function getFirstPaymentMethod(amount: number): Promise<number> {
+export async function getAvailablePaymentMethods(amount: number): Promise<{ PaymentMethodId: number; PaymentMethodEn: string }[]> {
   const res  = await fetch(`${BASE_URL}/v2/InitiatePayment`, {
     method:  'POST',
     headers: headers(),
@@ -14,9 +14,9 @@ export async function getFirstPaymentMethod(amount: number): Promise<number> {
   })
   const json = await res.json()
   if (!json.IsSuccess) throw new Error(json.Message || 'InitiatePayment failed')
-  const methods = json.Data.PaymentMethods as { PaymentMethodId: number }[]
+  const methods = json.Data.PaymentMethods as { PaymentMethodId: number; PaymentMethodEn: string }[]
   if (!methods?.length) throw new Error('No payment methods available')
-  return methods[0].PaymentMethodId
+  return methods
 }
 
 export async function executePayment(opts: {

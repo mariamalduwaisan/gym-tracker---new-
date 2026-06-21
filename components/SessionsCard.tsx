@@ -23,7 +23,7 @@ export default function SessionsCard() {
     setError('')
     setLoading(sessionsCount)
     try {
-      const res  = await authedFetch('/api/purchase/initiate', {
+      const res  = await authedFetch('https://ohgomlhudekqmnmhhnic.supabase.co/functions/v1/initiate-payment', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ sessionsCount, paymentMethodId: methodId }),

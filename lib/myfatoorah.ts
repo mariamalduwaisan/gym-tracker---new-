@@ -36,8 +36,8 @@ export async function executePayment(opts: {
       PaymentMethodId:    opts.paymentMethodId,
       CustomerName:       opts.customerName,
       DisplayCurrencyIso: 'KWD',
-      MobileCountryCode:  '+965',
-      CustomerMobile:     '00000000',
+      MobileCountryCode:  '965',
+      CustomerMobile:     '50000000',
       CustomerEmail:      opts.customerEmail,
       InvoiceValue:       opts.amountKwd,
       CallBackUrl:        opts.callbackUrl,
@@ -52,7 +52,10 @@ export async function executePayment(opts: {
     }),
   })
   const json = await res.json()
-  if (!json.IsSuccess) throw new Error(json.Message || 'ExecutePayment failed')
+  if (!json.IsSuccess) {
+    const detail = json.ValidationErrors?.map((e: { Error: string }) => e.Error).join(', ')
+    throw new Error(detail || json.Message || 'ExecutePayment failed')
+  }
   return { invoiceId: json.Data.InvoiceId, paymentUrl: json.Data.PaymentURL }
 }
 

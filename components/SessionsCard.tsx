@@ -4,14 +4,20 @@ import { useState } from 'react'
 import { authedFetch } from '@/lib/supabase'
 
 const PACKAGES = [
-  { sessions: 10, price: 100, label: 'Starter'    },
-  { sessions: 20, price: 200, label: 'Popular',  badge: 'Most Popular' },
-  { sessions: 30, price: 300, label: 'Committed', badge: 'Best Value'  },
+  { sessions: 10, price: 100, label: 'Starter'   },
+  { sessions: 20, price: 200, label: 'Popular',   badge: 'Most Popular' },
+  { sessions: 30, price: 300, label: 'Committed', badge: 'Best Value'   },
+]
+
+const METHODS = [
+  { id: 2, label: 'Visa / Master', icon: '💳' },
+  { id: 1, label: 'KNET',         icon: '🏦' },
 ]
 
 export default function SessionsCard() {
-  const [loading, setLoading] = useState<number | null>(null)
-  const [error,   setError]   = useState('')
+  const [methodId, setMethodId] = useState(2)
+  const [loading,  setLoading]  = useState<number | null>(null)
+  const [error,    setError]    = useState('')
 
   async function handleBuy(sessionsCount: number) {
     setError('')
@@ -20,13 +26,13 @@ export default function SessionsCard() {
       const res  = await authedFetch('/api/purchase/initiate', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ sessionsCount }),
+        body:    JSON.stringify({ sessionsCount, paymentMethodId: methodId }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Failed to start payment'); setLoading(null); return }
       window.location.href = data.paymentUrl
     } catch {
-      setError('Something went wrong. Please try again.')
+      setError('Payment gateway unavailable. Please try again later.')
       setLoading(null)
     }
   }
@@ -41,9 +47,33 @@ export default function SessionsCard() {
         <p style={{ color: '#3a3a3c', fontSize: 11 }}>10 KWD / session</p>
       </div>
 
+      {/* Payment method toggle */}
+      <div style={{
+        display: 'flex', gap: 8, marginBottom: 14,
+        background: '#1c1c1e', borderRadius: 12, padding: 4,
+        border: '1px solid #2c2c2e',
+      }}>
+        {METHODS.map(m => (
+          <button
+            key={m.id}
+            onClick={() => setMethodId(m.id)}
+            style={{
+              flex: 1, padding: '8px 0', borderRadius: 9, border: 'none',
+              background: methodId === m.id ? '#A5F044' : 'transparent',
+              color:      methodId === m.id ? '#000'     : '#636366',
+              fontSize: 13, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}
+          >
+            <span>{m.icon}</span> {m.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Packages */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {PACKAGES.map(pkg => {
-          const isLoading = loading === pkg.sessions
+          const isLoading  = loading === pkg.sessions
           const isDisabled = loading !== null
 
           return (

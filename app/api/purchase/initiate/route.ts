@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { makeSupabaseClient } from '@/lib/server-client'
-import { getAvailablePaymentMethods, executePayment } from '@/lib/myfatoorah'
+import { executePayment } from '@/lib/myfatoorah'
 
 const PACKAGES: Record<number, number> = { 10: 100, 20: 200, 30: 300 }
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
@@ -10,13 +10,12 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await client.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { sessionsCount } = await req.json()
+  const { sessionsCount, paymentMethodId = 2 } = await req.json()
   const amountKwd = PACKAGES[sessionsCount as number]
   if (!amountKwd) return NextResponse.json({ error: 'Invalid package' }, { status: 400 })
+  if (![1, 2].includes(paymentMethodId)) return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 })
 
   try {
-    await getAvailablePaymentMethods(amountKwd) // validate account has methods
-    const paymentMethodId = 0                  // show all methods (KNET + Visa/Master etc.)
     const reference = `TJ-${sessionsCount}S-${user.id.slice(0, 8)}-${Date.now()}`
 
     const { invoiceId, paymentUrl } = await executePayment({

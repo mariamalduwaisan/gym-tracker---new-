@@ -10,7 +10,7 @@ export async function getFirstPaymentMethod(amount: number): Promise<number> {
   const res  = await fetch(`${BASE_URL}/v2/InitiatePayment`, {
     method:  'POST',
     headers: headers(),
-    body: JSON.stringify({ InvoiceAmount: amount, CurrencyIso: 'KWD' }),
+    body: JSON.stringify({ InvoiceAmount: amount, CurrencyIso: 'KWD', CountryCode: 'KWT' }),
   })
   const json = await res.json()
   if (!json.IsSuccess) throw new Error(json.Message || 'InitiatePayment failed')
@@ -35,6 +35,7 @@ export async function executePayment(opts: {
     body: JSON.stringify({
       PaymentMethodId:    opts.paymentMethodId,
       CustomerName:       opts.customerName,
+      CountryCode:        'KWT',
       DisplayCurrencyIso: 'KWD',
       MobileCountryCode:  '+965',
       CustomerMobile:     '00000000',

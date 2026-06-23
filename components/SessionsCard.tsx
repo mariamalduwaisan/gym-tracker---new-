@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { authedFetch } from '@/lib/supabase'
 
 const PACKAGES = [
@@ -21,10 +21,15 @@ export default function SessionsCard() {
   const [methodId, setMethodId] = useState(2)
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState('')
+  const cartRef = useRef<HTMLDivElement>(null)
 
   function addToCart(pkg: CartItem) {
     setError('')
+    const isNew = cart?.sessions !== pkg.sessions
     setCart(prev => prev?.sessions === pkg.sessions ? null : pkg)
+    if (isNew) {
+      setTimeout(() => cartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80)
+    }
   }
 
   async function handleCheckout() {
@@ -130,7 +135,7 @@ export default function SessionsCard() {
 
       {/* Cart */}
       {cart && (
-        <div style={{
+        <div ref={cartRef} style={{
           background: '#1c1c1e',
           borderRadius: 18,
           border: '1.5px solid #A5F04460',
